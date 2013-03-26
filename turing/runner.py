@@ -4,6 +4,8 @@
 
 import sys
 from blessings import Terminal
+from turing.machine import compile_program
+
 
 def create_terminal_runner(machine, step=False):
     def run():
@@ -15,7 +17,7 @@ def create_terminal_runner(machine, step=False):
             else:
                 return char
         for l, (cur_state, tapes) in enumerate(machine):
-            sys.stdout.write(t.green(t.bold('[%s] ' % str(l+1))))
+            sys.stdout.write(t.green(t.bold('[%s] ' % str(l + 1))))
             with t.location(20):
                 sys.stdout.write(t.cyan(t.bold('[State %s] ' % str(cur_state))))
             for i, tape in enumerate(tapes):
@@ -38,7 +40,7 @@ def create_terminal_runner(machine, step=False):
 
 if __name__ == '__main__':
     from turing import machine
-    m = machine.Machine(tapes=('0000000000000000000000000000-0000000000'),
+    m = machine.Machine(tapes=('000000-00'),
                          functions=(
                              ((1,1),((0,0,'r'),)),
                              ((1,2),(('-',1,'r'),)),
@@ -46,10 +48,9 @@ if __name__ == '__main__':
                              ((2,3),((0,1,'l'),)),
                              ((3,3),((1,1,'l'),)),
                              ((3,2),((0,1,'r'),)),
-                             ((2,4),((None,'_','l'),)),
-                             ((4,4),((1,'_','l'),)),
-                         ),
-                         blank='_')
+                             ((2,4),((None,None,'l'),)),
+                             ((4,4),((1,None,'l'),)),
+                         ))
 
     m2 = machine.Machine(tapes=('00000+00', None),
                          functions=(
@@ -60,9 +61,26 @@ if __name__ == '__main__':
                          initial=1,
                          blank='_')
 
+    prog = compile_program('''
+        [
+            [(1,2), [(0,1,R), (B,B,S)]],
+            [(2,2), [(0,0,R), (B,B,S)]],
+            [(2,3), [('x','x',R), (B,B,S)]],
+            [(3,3), [(0,0,R), (B,0,R)]],
+            [(3,4), [(B,B,L), (B,B,S)]],
+            [(4,4), [(0,0,L), (B,B,S)]],
+            [(4,5), [('x','x',L), (B,B,S)]],
+            [(5,5), [(0,0,L), (B,B,S)]],
+            [(5,1), [(1,1,R), (B,B,S)]],
+            [(1,6), [('x','x',R), (B,B,S)]],
+        ]
+    ''')
+    m3 = machine.Machine(tapes=('00x00', None), functions=prog)
+
     mode = input('Step [s] or Runthrough [r]? ')
     step = mode.strip() == 's'
     run = create_terminal_runner(m, step=step)
-    run()
-    run = create_terminal_runner(m2, step=step)
-    run()
+    # run()
+    # run = create_terminal_runner(m2, step=step)
+    # run()
+    create_terminal_runner(m3, step=step)()

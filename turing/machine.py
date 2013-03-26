@@ -7,8 +7,11 @@ import re
 import textwrap
 
 
+DEFAULT_BLANK = '_'
+
+
 class Tape(object):
-    def __init__(self, word=None, blank=' '):
+    def __init__(self, word=None, blank=DEFAULT_BLANK):
         self._blank = blank
         self._tape = {}
         self._pos = 0
@@ -21,10 +24,10 @@ class Tape(object):
                         if x != self._blank])
 
     def format(self, formatter, l=None, r=None):
-        f = l and self._pos - l or min(self._tape.keys())
-        t = r and self._pos + r or max(self._tape.keys())
-        for i in range(f, t+1):
-            yield formatter(self._pos, i, self._tape.get(i,self._blank))
+        f = l and self._pos - l or min(self._tape.keys() or [0])
+        t = r and self._pos + r or max(self._tape.keys() or [0])
+        for i in range(f, t + 1):
+            yield formatter(self._pos, i, self._tape.get(i, self._blank))
 
     @property
     def pos(self):
@@ -45,7 +48,7 @@ class Machine(object):
                  tapes,
                  functions,
                  initial=1,
-                 blank=' '):
+                 blank=DEFAULT_BLANK):
         """
         functions
         """
@@ -53,7 +56,7 @@ class Machine(object):
         if not tapes:
             raise ValueError('tapes')
 
-        if type(tapes) not in (list,tuple,set):
+        if type(tapes) not in (list, tuple, set):
             tapes = [tapes]
 
         self._tapes = [Tape(t, blank) for t in tapes]
@@ -61,22 +64,31 @@ class Machine(object):
 
         def r(t):
             t.pos += 1
+
         def l(t):
             t.pos -= 1
 
         transd = {
             'r': r, 'l': l, 's': lambda t: None}
 
-        self._functions = {}
-        for (f, t), (fns) in functions:
-            if str(f) not in self._functions:
-                self._functions[str(f)] = defaultdict(dict)
+        def mk_key(fns):
+            l = []
             for tape_no, (cur_z, next_z, direction) in enumerate(fns):
                 if cur_z is None:
                     cur_z = self._blank
+                l.append(str(cur_z))
+            return tuple(l)
+
+        self._functions = {}
+        for (from_step, to_step), (fns) in functions:
+            if str(from_step) not in self._functions:
+                self._functions[str(from_step)] = defaultdict(list)
+            tapes_key = mk_key(fns)
+            for tape_no, (cur_z, next_z, direction) in enumerate(fns):
                 if next_z is None:
                     next_z = self._blank
-                self._functions[str(f)][tape_no][str(cur_z)] = (str(next_z), str(t), transd[direction])
+                self._functions[str(from_step)][tapes_key].append(
+                    (str(next_z), str(to_step), transd[direction]))
 
         self._cur_tape = tapes[0]
         self._cur_state = str(initial)
@@ -95,21 +107,34 @@ class Machine(object):
         """
         Calculate next step from input and functions
         """
-        done = False
+        def mk_tape_key():
+            l = []
+            for t in self._tapes:
+                l.append(t.read())
+            return tuple(l)
+
+        next_state = None
         transitions = self._functions.get(self._cur_state)
+        tape_key = mk_tape_key()
+
         if transitions:
-            for tno, tape in enumerate(self._tapes):
-                cur_z = tape.read()
-                t_transitions = transitions.get(tno)
-                if t_transitions:
-                    trans = t_transitions.get(cur_z)
+            cur_transitions = transitions.get(tape_key)
+            if cur_transitions:
+                for tno, trans in enumerate(cur_transitions):
+                    tape = self._tapes[tno]
                     if trans:
                         next_z, next_state, move = trans
                         tape.write(next_z)
                         move(tape)
-                        self._cur_state = next_state
-                        done = True
-        return done
+                    else:
+                        return False
+            else:
+                return False
+        else:
+            return False
+
+        self._cur_state = next_state
+        return True
 
 
 def compile_program(program):
@@ -138,6 +163,7 @@ def compile_program(program):
     program = re.sub(r'([\s(,]+)B([\s,]+)', r'\1None\2', program)
     program = re.sub(r'([\s,]+)B([\s,]+)', r'\1None\2', program)
     program = re.sub(r'([\s,]+)R([)]+)', r'\1"r"\2', program)
+    program = re.sub(r'([\s,]+)S([)]+)', r'\1"r"\2', program)
     program = re.sub(r'([\s,]+)L([)]+)', r'\1"l"\2', program)
 
     return literal_eval(textwrap.dedent(program))
