@@ -75,7 +75,7 @@ if __name__ == '__main__':
             [(1,6), [('x','x',R), (B,B,S)]],
         ]
     ''')
-    m3 = machine.Machine(tapes=('00x00', None), functions=prog)
+    m3 = machine.Machine(tapes=('0000x000', None), functions=prog)
 
     mode = input('Step [s] or Runthrough [r]? ')
     step = mode.strip() == 's'
