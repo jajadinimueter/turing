@@ -52,15 +52,6 @@ if __name__ == '__main__':
                              ((4,4),((1,None,'l'),)),
                          ))
 
-    m2 = machine.Machine(tapes=('00000+00', None),
-                         functions=(
-                             ((1,2),((0,'_','r'),(None,'x','l'))),
-                             ((2,2),((0,0,'r'),(None,'x','r'))),
-                             ((2,3),(('+',0,'r'),('x','q','s')))
-                         ),
-                         initial=1,
-                         blank='_')
-
     prog = compile_program('''
         [
             [(1,2), [(0,1,R), (B,B,S)]],
@@ -75,12 +66,10 @@ if __name__ == '__main__':
             [(1,6), [('x','x',R), (B,B,S)]],
         ]
     ''')
-    m3 = machine.Machine(tapes=('0000x000', None), functions=prog)
+    m3 = machine.Machine(tapes=('000000000000x0000', None), functions=prog)
 
     mode = input('Step [s] or Runthrough [r]? ')
     step = mode.strip() == 's'
-    run = create_terminal_runner(m, step=step)
-    # run()
-    # run = create_terminal_runner(m2, step=step)
-    # run()
+
+    create_terminal_runner(m, step=step)()
     create_terminal_runner(m3, step=step)()

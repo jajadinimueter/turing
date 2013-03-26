@@ -119,11 +119,40 @@ class TuringTestCase(unittest.TestCase):
         assert str(t2) == ''
         t1, t2 = n()
         assert str(t1) == '10x00'
-        assert str(t2) == ''
-        t1, t2 = n()
-        assert str(t1) == '10x00'
         assert str(t2) == '0'
         t1, t2 = n()
+        assert str(t1) == '10x00'
+        assert str(t2) == '00'
+        t1, t2 = n()
+        assert str(t1) == '10x00'
+        assert str(t2) == '00'
+        t1, t2 = n()
+        assert str(t1) == '10x00'
+        assert str(t2) == '00'
+        t1, t2 = n()
+        assert str(t1) == '10x00'
+        assert str(t2) == '00'
+        t1, t2 = n()
+        assert str(t1) == '10x00'
+        assert str(t2) == '00'
+        t1, t2 = n()
+        assert str(t1) == '10x00'
+        assert str(t2) == '00'
+        t1, t2 = n()
+        assert str(t1) == '10x00'
+        assert str(t2) == '00'
+        t1, t2 = n()
+        assert str(t1) == '11x00'
+        assert str(t2) == '00'
+        t1, t2 = n()
+        assert str(t1) == '11x00'
+        assert str(t2) == '00'
+        t1, t2 = n()
+        assert str(t1) == '11x00'
+        assert str(t2) == '000'
+        t1, t2 = n()
+        assert str(t1) == '11x00'
+        assert str(t2) == '0000'
 
 
 
