@@ -163,7 +163,7 @@ def compile_program(program):
     program = re.sub(r'([\s(,]+)B([\s,]+)', r'\1None\2', program)
     program = re.sub(r'([\s,]+)B([\s,]+)', r'\1None\2', program)
     program = re.sub(r'([\s,]+)R([)]+)', r'\1"r"\2', program)
-    program = re.sub(r'([\s,]+)S([)]+)', r'\1"r"\2', program)
+    program = re.sub(r'([\s,]+)S([)]+)', r'\1"s"\2', program)
     program = re.sub(r'([\s,]+)L([)]+)', r'\1"l"\2', program)
 
     return literal_eval(textwrap.dedent(program))
