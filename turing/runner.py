@@ -7,7 +7,10 @@ from blessings import Terminal
 from turing.machine import compile_program
 
 
-def create_terminal_runner(machine, step=False):
+def create_terminal_runner(machine, step=False, loffset=15, roffset=None):
+    roffset = roffset or loffset
+    loffset = loffset or 15
+
     def run():
         s = step
         t = Terminal()
@@ -23,7 +26,7 @@ def create_terminal_runner(machine, step=False):
             for i, tape in enumerate(tapes):
                 with t.location(40):
                     sys.stdout.write('[Tape %s] ' % i)
-                    c = ''.join(tape.format(format_char, 15, 15))
+                    c = ''.join(tape.format(format_char, loffset, roffset))
                     sys.stdout.write(c)
                     if i < len(tapes) - 1:
                         sys.stdout.write('\n')
@@ -40,7 +43,7 @@ def create_terminal_runner(machine, step=False):
 
 if __name__ == '__main__':
     from turing import machine
-    m = machine.Machine(tapes=('000000-00'),
+    m = machine.Machine(tapes=('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-000000000000000000000000000000000000000000000000000000000000000000000'),
                          functions=(
                              ((1,1),((0,0,'r'),)),
                              ((1,2),(('-',1,'r'),)),
@@ -51,6 +54,30 @@ if __name__ == '__main__':
                              ((2,4),((None,None,'l'),)),
                              ((4,4),((1,None,'l'),)),
                          ))
+
+    s_prog = '''
+       [
+         [(1,2), [(B,'S',R)]],
+         [(2,3), [(B,'I',R)]],
+         [(3,4), [(B,'V',R)]],
+         [(4,5), [(B,'I',R)]],
+         [(5,6), [(B,'\033[31m\u2764\033[37m',R)]],
+         [(6,7), [(B,'F',R)]],
+         [(7,8), [(B,'L',R)]],
+         [(8,9), [(B,'O',R)]],
+       ]  
+    '''
+
+    s_prog = compile_program(s_prog)
+
+    any_prog = '''
+        [
+            [(1,1), [(A,A,R)]],
+            [(1,2), [(1,1,S)]]
+        ]
+    '''
+
+    any_prog = compile_program(any_prog)
 
     prog = compile_program('''
         [
@@ -66,10 +93,18 @@ if __name__ == '__main__':
             [(1,6), [('x','x',R), (B,B,S)]],
         ]
     ''')
-    m3 = machine.Machine(tapes=('000000000000x0000', None), functions=prog)
+    m3 = machine.Machine(tapes=('000000000000000000x000000000000', None), functions=prog)
+    m4 = machine.Machine(tapes=(None,), functions=s_prog)
 
     mode = input('Step [s] or Runthrough [r]? ')
     step = mode.strip() == 's'
 
-    create_terminal_runner(m, step=step)()
-    create_terminal_runner(m3, step=step)()
+    #create_terminal_runner(m, step=step)()
+    #create_terminal_runner(m3, step=step)()
+    create_terminal_runner(
+        machine.Machine(
+            tapes=('00000001',),
+            functions=any_prog
+        ),
+        step=step)()
+    #create_terminal_runner(m4, step=step)()

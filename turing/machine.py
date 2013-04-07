@@ -7,7 +7,14 @@ import re
 import textwrap
 
 
+
 DEFAULT_BLANK = '_'
+
+
+class Any(object):
+    """
+    Marker for the any-char
+    """
 
 
 class Tape(object):
@@ -72,23 +79,34 @@ class Machine(object):
             'r': r, 'l': l, 's': lambda t: None}
 
         def mk_key(fns):
-            l = []
+            lockey = []
+
             for tape_no, (cur_z, next_z, direction) in enumerate(fns):
                 if cur_z is None:
                     cur_z = self._blank
-                l.append(str(cur_z))
-            return tuple(l)
+                lockey.append(str(cur_z))
+
+            def checker(key):
+                for i, dx in enumerate(lockey):
+                    if dx is True:
+                        break
+                    if dx != key[i]:
+                        return False
+
+                return True
+
+            return checker
 
         self._functions = {}
         for (from_step, to_step), (fns) in functions:
             if str(from_step) not in self._functions:
                 self._functions[str(from_step)] = defaultdict(list)
             tapes_key = mk_key(fns)
-            for tape_no, (cur_z, next_z, direction) in enumerate(fns):
-                if next_z is None:
-                    next_z = self._blank
+            for tape_no, (cur_char, next_char, direction) in enumerate(fns):
+                if next_char is None:
+                    next_char = self._blank
                 self._functions[str(from_step)][tapes_key].append(
-                    (str(next_z), str(to_step), transd[direction]))
+                    (str(next_char), str(to_step), transd[direction]))
 
         self._cur_tape = tapes[0]
         self._cur_state = str(initial)
@@ -102,6 +120,11 @@ class Machine(object):
         while n:
             yield self._cur_state, self._tapes
             n = self._next_step()
+
+    def _get_cur_transactions(self, key, transactions):
+        for t, v in transactions.items():
+            if t(key):
+                return v
 
     def _next_step(self):
         """
@@ -118,13 +141,13 @@ class Machine(object):
         tape_key = mk_tape_key()
 
         if transitions:
-            cur_transitions = transitions.get(tape_key)
+            cur_transitions = self._get_cur_transactions(tape_key, transitions)
             if cur_transitions:
                 for tno, trans in enumerate(cur_transitions):
                     tape = self._tapes[tno]
-                    if trans:
-                        next_z, next_state, move = trans
-                        tape.write(next_z)
+                    if tape:
+                        next_char, next_state, move = trans
+                        tape.write(next_char)
                         move(tape)
                     else:
                         return False
@@ -162,6 +185,8 @@ def compile_program(program):
     program = re.sub(r'([\s,(]+)BLANK([\s,]+)', r'\1None\2', program)
     program = re.sub(r'([\s(,]+)B([\s,]+)', r'\1None\2', program)
     program = re.sub(r'([\s,]+)B([\s,]+)', r'\1None\2', program)
+    program = re.sub(r'([\s(,]+)A([\s,]+)', r'\1True\2', program)
+    program = re.sub(r'([\s,]+)A([\s,]+)', r'\1True\2', program)
     program = re.sub(r'([\s,]+)R([)]+)', r'\1"r"\2', program)
     program = re.sub(r'([\s,]+)S([)]+)', r'\1"s"\2', program)
     program = re.sub(r'([\s,]+)L([)]+)', r'\1"l"\2', program)
