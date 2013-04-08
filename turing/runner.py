@@ -49,7 +49,6 @@ def create_terminal_runner(machine,
                 screen.border(0)
                 addstr(2,2,'[%s] ' % str(l + 1))
                 with t.location(20):
-                    # stdscr.addstr(t.cyan(t.bold('[State %s] ' % str(cur_state))))
                     addstr(2,10,'[State %s (%s)] ' % (str(cur_state), str(last_state)))
                 for i, tape in enumerate(tapes):
                     addstr(i*2 + 2,25,'[Tape %s] ' % i)
@@ -116,121 +115,16 @@ def main():
     with open(file_path, 'r', encoding='utf-8') as f:
         program = compile_program(f.read())
 
-    ma = Machine(tapes=args.inputs,
-                         functions=program)
+    kw = {'tapes': args.inputs}
+    if isinstance(program, dict):
+        kw.update(program)
+    else:
+        kw.update({'functions': program})
+
+    ma = Machine(**kw)
 
     run_fac = RUNNER_FACTORIES.get(args.format)
     if not run_fac:
         run_fac = create_terminal_runner
 
     run_fac(ma, step_by_step=args.step, lag=args.lag or 0.1)()
-
-
-if __name__ == '__main__':
-
-    m = Machine(tapes=('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-000000000000000000000000000000000000000000000000000000000000000000000'),
-                         functions=(
-                             ((1,1),((0,0,'r'),)),
-                             ((1,2),(('-',1,'r'),)),
-                             ((2,2),((1,1,'r'),)),
-                             ((2,3),((0,1,'l'),)),
-                             ((3,3),((1,1,'l'),)),
-                             ((3,2),((0,1,'r'),)),
-                             ((2,4),((None,None,'l'),)),
-                             ((4,4),((1,None,'l'),)),
-                         ))
-
-    s_prog = '''
-       [
-         [(1,2), [(B,'S',R)]],
-         [(2,3), [(B,'I',R)]],
-         [(3,4), [(B,'V',R)]],
-         [(4,5), [(B,'I',R)]],
-         [(5,6), [(B,'\033[31m\u2764\033[37m',R)]],
-         [(6,7), [(B,'F',R)]],
-         [(7,8), [(B,'L',R)]],
-         [(8,9), [(B,'O',R)]],
-       ]  
-    '''
-
-    s_prog = compile_program(s_prog)
-
-    any_prog = '''
-        [
-            [(1,1), [(A,A,R)]],
-            [(1,2), [(1,1,S)]]
-        ]
-    '''
-
-    any_prog = compile_program(any_prog)
-
-    fac = compile_program('''
-        [
-            [(1,2), [(A,1,R), (A,A,S), (B,0,R)]],
-            [(2,2), [(0,0,R), (A,A,S), (B,0,R)]],
-            [(2,3), [(B,B,L), (A,A,S), (B,B,L)]],
-            [(3,3), [(0,0,S), (B,0,R), (0,0,L)]],
-            [(3,4), [(0,0,L), (B,B,S), (B,B,R)]],
-            [(3,6), [(1,1,R), (B,B,L), (0,0,S)]],
-            [(3,6), [(1,1,R), (B,B,L), (B,B,L)]],
-            [(4,4), [(0,0,S), (B,0,R), (0,0,R)]],
-            [(4,3), [(0,0,L), (B,B,S), (B,B,L)]],
-            [(4,5), [(1,1,R), (B,B,L), (0,0,S)]],
-            [(5,5), [(0,1,S), (0,B,L), (A,0,R)]],
-            [(5,5), [(1,1,S), (0,B,L), (A,0,R)]],
-            [(5,7), [(1,1,R), (B,B,S), (B,B,S)]],
-            [(7,7), [(0,0,R), (B,B,S), (B,B,S)]],
-            [(7,3), [(B,B,L), (B,B,S), (B,B,L)]],
-            [(6,6), [(0,1,S), (0,B,L), (A,0,L)]],
-            [(6,6), [(1,1,S), (0,B,L), (A,0,L)]],
-            [(6,8), [(1,1,R), (B,B,S), (B,B,S)]],
-            [(8,8), [(0,0,R), (B,B,S), (B,B,S)]],
-            [(8,4), [(B,B,L), (B,B,S), (B,B,R)]],
-        ]
-    ''')
-
-    prog = compile_program('''
-        [
-            [(1,2), [(0,1,R), (B,B,S)]],
-            [(2,2), [(0,0,R), (B,B,S)]],
-            [(2,3), [('x','x',R), (B,B,S)]],
-            [(3,3), [(0,0,R), (B,0,R)]],
-            [(3,4), [(B,B,L), (B,B,S)]],
-            [(4,4), [(0,0,L), (B,B,S)]],
-            [(4,5), [('x','x',L), (B,B,S)]],
-            [(5,5), [(0,0,L), (B,B,S)]],
-            [(5,1), [(1,1,R), (B,B,S)]],
-            [(1,6), [('x','x',R), (B,B,S)]],
-        ]
-    ''')
-    m3 = Machine(tapes=('000000000000000000x000000000000', None), functions=prog)
-    m4 = Machine(tapes=(None,), functions=s_prog)
-
-    mode = input('Step [s] or Runthrough [r]? ')
-    step = mode.strip() == 's'
-
-    #create_terminal_runner(m, step=step)()
-    # create_terminal_runner(m3, step_by_step=step)()
-    # create_terminal_runner(
-    #     Machine(
-    #         tapes=('00000001',),
-    #         functions=any_prog
-    #     ),
-    #     step_by_step=step)()
-
-    def print_0_counts(tape_content, addstr):
-        addstr('%s' % len([x for x in tape_content if x == '0']))
-
-    fac_machine =  Machine(
-        tapes=('00000',None,None),
-        functions=fac
-    )
-
-    # create_terminal_runner(
-    #     fac_machine,
-    #     step_by_step=step,
-    #     tape_eval=print_0_counts)()
-
-    create_fast_runner(fac_machine)()
-
-    #create_terminal_runner(m4, step=step)()
