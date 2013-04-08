@@ -30,6 +30,12 @@ class Tape(object):
         return ''.join([x for x in self.format(lambda _,_1,c: c)
                         if x != self._blank])
 
+    def chars(self, l=None, r=None):
+        f = l and self._pos - l or min(self._tape.keys() or [0])
+        t = r and self._pos + r or max(self._tape.keys() or [0])
+        for i in range(f, t + 1):
+            yield self._pos, i, self._tape.get(i, self._blank)
+
     def format(self, formatter, l=None, r=None):
         f = l and self._pos - l or min(self._tape.keys() or [0])
         t = r and self._pos + r or max(self._tape.keys() or [0])
@@ -84,13 +90,15 @@ class Machine(object):
             for tape_no, (cur_z, next_z, direction) in enumerate(fns):
                 if cur_z is None:
                     cur_z = self._blank
-                lockey.append(str(cur_z))
+                if type(cur_z) != bool:
+                    cur_z = str(cur_z)
+                lockey.append(cur_z)
 
             def checker(key):
                 for i, dx in enumerate(lockey):
                     if dx is True:
                         break
-                    if dx != key[i]:
+                    if str(dx) != key[i]:
                         return False
 
                 return True
@@ -105,11 +113,17 @@ class Machine(object):
             for tape_no, (cur_char, next_char, direction) in enumerate(fns):
                 if next_char is None:
                     next_char = self._blank
+                if type(next_char) != bool:
+                    next_char = str(next_char)
                 self._functions[str(from_step)][tapes_key].append(
-                    (str(next_char), str(to_step), transd[direction]))
+                    (next_char, str(to_step), transd[direction]))
 
         self._cur_tape = tapes[0]
         self._cur_state = str(initial)
+
+    @property
+    def tapes(self):
+        return self._tapes
 
     def __iter__(self):
         """
@@ -147,6 +161,8 @@ class Machine(object):
                     tape = self._tapes[tno]
                     if tape:
                         next_char, next_state, move = trans
+                        if next_char is True:
+                            next_char = tape.read()
                         tape.write(next_char)
                         move(tape)
                     else:

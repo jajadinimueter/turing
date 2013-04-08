@@ -80,6 +80,33 @@ class TuringTestCase(unittest.TestCase):
 
         self.assertRaises(StopIteration, lambda: next(i))
 
+    def test_fac(self):
+        fac = compile_program('''
+            [
+                [(1,2), [(0,1,R), (A,A,S), (B,0,R)]],
+                [(2,2), [(0,0,R), (A,A,S), (B,0,R)]],
+                [(2,3), [(B,B,L), (A,A,S), (B,B,L)]],
+                [(3,3), [(0,0,S), (B,0,R), (0,0,L)]],
+                [(3,4), [(0,0,L), (B,B,S), (B,B,R)]],
+                [(3,6), [(1,1,R), (B,B,L), (B,B,R)]],
+                [(4,4), [(0,0,S), (B,0,R), (0,0,R)]],
+                [(4,3), [(0,0,L), (B,B,S), (B,B,L)]],
+                [(4,5), [(1,1,R), (B,B,L), (B,B,L)]],
+                [(5,5), [(0,0,R), (0,B,L), (A,0,L)]],
+                [(5,5), [(B,B,S), (0,B,L), (A,0,L)]],
+                [(5,4), [(B,B,L), (A,A,S), (B,B,R)]],
+                [(5,4), [(B,B,L), (A,A,S), (B,B,R)]],
+                [(6,6), [(B,B,S), (0,B,L), (A,0,R)]],
+                [(6,3), [(B,B,L), (B,B,S), (B,B,R)]],
+            ]
+        ''')
+
+        m = ma.Machine(tapes=('0000', None, None),
+                       functions=fac)
+
+        for i in m:
+            print(i)
+
     def test_multiply(self):
         prog = compile_program('''
             [
