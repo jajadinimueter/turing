@@ -91,6 +91,12 @@ def create_fast_runner(m, **kwargs):
     return run
 
 
+def create_counter(char):
+    def counter(chars, addstr):
+        addstr('%d' % len([x for x in chars if x == char]))
+    return counter
+
+
 RUNNER_FACTORIES = {
     'pretty': create_terminal_runner,
     'fast': create_fast_runner
@@ -104,6 +110,7 @@ def main():
     parser.add_argument('-o', '--output', dest='format')
     parser.add_argument('-s', '--step', action='store_true')
     parser.add_argument('-l', '--lag', type=float, dest='lag')
+    parser.add_argument('-c', '--count', dest='count')
 
     args = parser.parse_args()
 
@@ -127,4 +134,13 @@ def main():
     if not run_fac:
         run_fac = create_terminal_runner
 
-    run_fac(ma, step_by_step=args.step, lag=args.lag or 0.1)()
+    runargs = {
+        'step_by_step': args.step,
+        'lag': args.lag or 0.1
+    }
+
+    if args.count:
+        runargs['tape_eval'] = create_counter(args.count)
+
+    run_fac(ma,
+            **runargs)()
