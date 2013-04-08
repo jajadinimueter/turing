@@ -16,6 +16,10 @@ setup(
         'pytest'
     ],
     packages=packages,
+    entry_points="""\
+    [console_scripts]
+    turing = turing.runner:main
+    """,
     package_data={
         '': ['*.txt', '*.csv', '*.tex', '*.cfg', '*.jpg']
     }

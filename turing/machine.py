@@ -67,12 +67,14 @@ class Machine(object):
         """
 
         if not tapes:
-            raise ValueError('tapes')
+            tapes = []
 
         if type(tapes) not in (list, tuple, set):
             tapes = [tapes]
 
-        self._tapes = [Tape(t, blank) for t in tapes]
+        self._tapes = {i : Tape(t, blank)
+                       for i, t in enumerate(tapes)}
+
         self._blank = blank
 
         def r(t):
@@ -111,6 +113,8 @@ class Machine(object):
                 self._functions[str(from_step)] = defaultdict(list)
             tapes_key = mk_key(fns)
             for tape_no, (cur_char, next_char, direction) in enumerate(fns):
+                if tape_no not in self._tapes:
+                    self._tapes[tape_no] = Tape(blank=blank)
                 if next_char is None:
                     next_char = self._blank
                 if type(next_char) != bool:
@@ -118,21 +122,22 @@ class Machine(object):
                 self._functions[str(from_step)][tapes_key].append(
                     (next_char, str(to_step), transd[direction]))
 
-        self._cur_tape = tapes[0]
+        self._cur_tape = self.tapes[0]
         self._cur_state = str(initial)
 
     @property
     def tapes(self):
-        return self._tapes
+        return [self._tapes[i]
+                for i in sorted(self._tapes.keys())]
 
     def __iter__(self):
         """
         Make the machine an iterator
         """
-        yield self._cur_state, self._tapes
+        yield self._cur_state, self.tapes
         n = self._next_step()
         while n:
-            yield self._cur_state, self._tapes
+            yield self._cur_state, self.tapes
             n = self._next_step()
 
     def _get_cur_transactions(self, key, transactions):
@@ -146,7 +151,7 @@ class Machine(object):
         """
         def mk_tape_key():
             l = []
-            for t in self._tapes:
+            for t in self.tapes:
                 l.append(t.read())
             return tuple(l)
 
@@ -158,7 +163,7 @@ class Machine(object):
             cur_transitions = self._get_cur_transactions(tape_key, transitions)
             if cur_transitions:
                 for tno, trans in enumerate(cur_transitions):
-                    tape = self._tapes[tno]
+                    tape = self.tapes[tno]
                     if tape:
                         next_char, next_state, move = trans
                         if next_char is True:

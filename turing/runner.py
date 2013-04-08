@@ -1,20 +1,22 @@
 """
 
 """
+import argparse
 import functools
+import os
 
 import sys
 import time
 import curses
 
 from blessings import Terminal
-from turing.machine import compile_program
+from turing.machine import compile_program, Machine
 
 def create_terminal_runner(machine,
                            step_by_step=False,
                            loffset=15,
                            roffset=None,
-                           lag=0.02,
+                           lag=0.1,
                            tape_eval=None):
 
     roffset = roffset or loffset
@@ -44,9 +46,7 @@ def create_terminal_runner(machine,
             t = Terminal()
             last_state = None
             for l, (cur_state, tapes) in enumerate(machine):
-                # screen.clear()
-                # screen.border(0)
-                # screen.addstr(t.green(t.bold('[%s] ' % str(l + 1))))
+                screen.border(0)
                 addstr(2,2,'[%s] ' % str(l + 1))
                 with t.location(20):
                     # stdscr.addstr(t.cyan(t.bold('[State %s] ' % str(cur_state))))
@@ -54,7 +54,6 @@ def create_terminal_runner(machine,
                 for i, tape in enumerate(tapes):
                     addstr(i*2 + 2,25,'[Tape %s] ' % i)
 
-                    chars = ''
                     for j, (pos, cur, char) in enumerate(tape.chars(loffset, roffset)):
                         if pos == cur:
                             addstr(i* 2 + 2, j + 40, char, curses.color_pair(1))
@@ -79,7 +78,7 @@ def create_terminal_runner(machine,
     return run
 
 
-def create_fast_runner(m):
+def create_fast_runner(m, **kwargs):
     def run():
         c = 0
         for i, _ in enumerate(m):
@@ -92,9 +91,44 @@ def create_fast_runner(m):
         print('Num steps: %d' % c)
     return run
 
+
+RUNNER_FACTORIES = {
+    'pretty': create_terminal_runner,
+    'fast': create_fast_runner
+}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('program')
+    parser.add_argument('-i', '--input', dest='inputs', action='append')
+    parser.add_argument('-o', '--output', dest='format')
+    parser.add_argument('-s', '--step', action='store_true')
+    parser.add_argument('-l', '--lag', type=float, dest='lag')
+
+    args = parser.parse_args()
+
+    file_path = os.path.abspath(os.path.expanduser(args.program))
+    if not os.path.exists(file_path):
+        # try current dir
+        parser.exit(message='No such file %s\n' % file_path)
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        program = compile_program(f.read())
+
+    ma = Machine(tapes=args.inputs,
+                         functions=program)
+
+    run_fac = RUNNER_FACTORIES.get(args.format)
+    if not run_fac:
+        run_fac = create_terminal_runner
+
+    run_fac(ma, step_by_step=args.step, lag=args.lag or 0.1)()
+
+
 if __name__ == '__main__':
-    from turing import machine
-    m = machine.Machine(tapes=('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-000000000000000000000000000000000000000000000000000000000000000000000'),
+
+    m = Machine(tapes=('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-000000000000000000000000000000000000000000000000000000000000000000000'),
                          functions=(
                              ((1,1),((0,0,'r'),)),
                              ((1,2),(('-',1,'r'),)),
@@ -132,7 +166,7 @@ if __name__ == '__main__':
 
     fac = compile_program('''
         [
-            [(1,2), [(0,1,R), (A,A,S), (B,0,R)]],
+            [(1,2), [(A,1,R), (A,A,S), (B,0,R)]],
             [(2,2), [(0,0,R), (A,A,S), (B,0,R)]],
             [(2,3), [(B,B,L), (A,A,S), (B,B,L)]],
             [(3,3), [(0,0,S), (B,0,R), (0,0,L)]],
@@ -169,8 +203,8 @@ if __name__ == '__main__':
             [(1,6), [('x','x',R), (B,B,S)]],
         ]
     ''')
-    m3 = machine.Machine(tapes=('000000000000000000x000000000000', None), functions=prog)
-    m4 = machine.Machine(tapes=(None,), functions=s_prog)
+    m3 = Machine(tapes=('000000000000000000x000000000000', None), functions=prog)
+    m4 = Machine(tapes=(None,), functions=s_prog)
 
     mode = input('Step [s] or Runthrough [r]? ')
     step = mode.strip() == 's'
@@ -178,7 +212,7 @@ if __name__ == '__main__':
     #create_terminal_runner(m, step=step)()
     # create_terminal_runner(m3, step_by_step=step)()
     # create_terminal_runner(
-    #     machine.Machine(
+    #     Machine(
     #         tapes=('00000001',),
     #         functions=any_prog
     #     ),
@@ -187,15 +221,14 @@ if __name__ == '__main__':
     def print_0_counts(tape_content, addstr):
         addstr('%s' % len([x for x in tape_content if x == '0']))
 
-    fac_machine =  machine.Machine(
-        tapes=('000000000',None,None),
+    fac_machine =  Machine(
+        tapes=('00000',None,None),
         functions=fac
     )
 
     # create_terminal_runner(
     #     fac_machine,
     #     step_by_step=step,
-    #     lag=0,
     #     tape_eval=print_0_counts)()
 
     create_fast_runner(fac_machine)()
