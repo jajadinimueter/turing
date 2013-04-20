@@ -16,7 +16,7 @@ def create_terminal_runner(machine,
                            step_by_step=False,
                            loffset=15,
                            roffset=None,
-                           lag=0.1,
+                           lag=None,
                            tape_eval=None):
 
     roffset = roffset or loffset
@@ -33,6 +33,11 @@ def create_terminal_runner(machine,
         screen.border(0)
         curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_YELLOW)
 
+        def clearrange(x1, x2, y1, y2):
+            for x in range(x, x2):
+                for y in range(y1, y2):
+                    screen.delch(x, y)
+
         def addstr(*args, **kwargs):
             try:
                 screen.addstr(*args,**kwargs)
@@ -45,31 +50,46 @@ def create_terminal_runner(machine,
             local_step_by_step = step_by_step
             t = Terminal()
             last_state = None
-            for l, (cur_state, tapes) in enumerate(machine):
+            last_pos = {}
+            for step_count, (cur_state, tapes) in enumerate(machine):
+                screen.move(2,2)
+                screen.clrtoeol()
                 screen.border(0)
-                addstr(2,2,'[%s] ' % str(l + 1))
+                addstr('[%s] ' % str(step_count + 1))
+
                 with t.location(20):
                     addstr(2,10,'[State %s (%s)] ' % (str(cur_state), str(last_state)))
+
                 for i, tape in enumerate(tapes):
-                    addstr(i*2 + 2,25,'[Tape %s] ' % i)
+                    x = i*2 + 2
+                    y = 25
+                    screen.move(x, y)
+                    screen.clrtoeol()
+                    addstr(x, y,'[Tape %s] ' % i)
 
                     for j, (pos, cur, char) in enumerate(tape.chars(loffset, roffset)):
                         if pos == cur:
-                            addstr(i* 2 + 2, j + 40, char, curses.color_pair(1))
+                            addstr(x, y + 30 + j, char, curses.color_pair(1))
                         else:
-                            addstr(i* 2 + 2, j + 40, char)
+                            addstr(x, y + 30 + j, char)
 
                         if callable(tape_eval):
-                            tape_eval(str(tape), functools.partial(addstr, i*2+2, 100))
+                            tape_eval(str(tape), functools.partial(addstr, x, y + 100))
 
-                        screen.refresh()
+                    if tape.pos > last_pos.get(i,0):
+                        addstr(x, y + 80, '>>', curses.A_BOLD | curses.COLOR_GREEN)
+                    else:
+                        addstr(x, y + 80, '<<', curses.A_BOLD | curses.COLOR_GREEN)
+
+                    last_pos[i] = tape.pos
 
                 if local_step_by_step:
                     screen.getch()
 
-                time.sleep(lag)
-                screen.refresh()
+                if lag:
+                    time.sleep(lag)
                 last_state = cur_state
+                screen.refresh()
             screen.getch()
         finally:
             curses.endwin()
@@ -136,7 +156,7 @@ def main():
 
     runargs = {
         'step_by_step': args.step,
-        'lag': args.lag or 0.1
+        'lag': args.lag
     }
 
     if args.count:

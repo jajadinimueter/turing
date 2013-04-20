@@ -135,10 +135,10 @@ class Machine(object):
         Make the machine an iterator
         """
         yield self._cur_state, self.tapes
-        n = self._next_step()
-        while n:
+        next_step = self._next_step()
+        while next_step:
             yield self._cur_state, self.tapes
-            n = self._next_step()
+            next_step = self._next_step()
 
     def _get_cur_transactions(self, key, transactions):
         for t, v in transactions.items():
