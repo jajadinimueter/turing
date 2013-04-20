@@ -146,15 +146,18 @@ def create_terminal_runner(machine,
     return run
 
 
-def create_fast_runner(m, **kwargs):
+def create_fast_runner(m, tape_eval=None, **kwargs):
     def run():
         c = 0
         for i, _ in enumerate(m):
             c += 1
 
-        for tape in m.tapes:
-            s = str(tape)
-            print('%s: %s' % (len([x for x in s if x == '0']), s))
+        # for tape in m.tapes:
+        #     print('%s', str(tape))
+
+        if callable(tape_eval):
+            for tape in m.tapes:
+                tape_eval(str(tape), lambda x: print(x))
 
         print('Num steps: %d' % c)
     return run
