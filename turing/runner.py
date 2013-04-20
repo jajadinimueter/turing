@@ -27,72 +27,121 @@ def create_terminal_runner(machine,
 
 
         """
-        screen = curses.initscr()
-        curses.start_color()
-        screen.clear()
-        screen.border(0)
-        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_YELLOW)
 
-        def clearrange(x1, x2, y1, y2):
-            for x in range(x, x2):
-                for y in range(y1, y2):
-                    screen.delch(x, y)
+        with open('/tmp/turing.log', 'w') as log:
+            screen = curses.initscr()
+            curses.start_color()
+            screen.clear()
+            screen.border(0)
+            curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_YELLOW)
 
-        def addstr(*args, **kwargs):
+            def addstr(*args, **kwargs):
+                try:
+                    screen.addstr(*args,**kwargs)
+                except curses.error:
+                    pass
+
             try:
-                screen.addstr(*args,**kwargs)
-            except curses.error:
-                pass
+                curses.noecho()
+                curses.cbreak()
+                local_step_by_step = step_by_step
+                t = Terminal()
+                last_state = None
+                last_pos = {}
 
-        try:
-            curses.noecho()
-            curses.cbreak()
-            local_step_by_step = step_by_step
-            t = Terminal()
-            last_state = None
-            last_pos = {}
-            for step_count, (cur_state, tapes) in enumerate(machine):
-                screen.move(2,2)
-                screen.clrtoeol()
-                screen.border(0)
-                addstr('[%s] ' % str(step_count + 1))
+                old_curs = {}
+                forward_counts = {}
+                backward_counts = {}
 
-                with t.location(20):
-                    addstr(2,10,'[State %s (%s)] ' % (str(cur_state), str(last_state)))
-
-                for i, tape in enumerate(tapes):
-                    x = i*2 + 2
-                    y = 25
-                    screen.move(x, y)
+                for step_count, (cur_state, tapes) in enumerate(machine):
+                    screen.move(2,2)
                     screen.clrtoeol()
-                    addstr(x, y,'[Tape %s] ' % i)
+                    screen.border(0)
+                    addstr('[%s] ' % str(step_count + 1))
 
-                    for j, (pos, cur, char) in enumerate(tape.chars(loffset, roffset)):
-                        if pos == cur:
-                            addstr(x, y + 30 + j, char, curses.color_pair(1))
+                    with t.location(20):
+                        addstr(2,10,'[State %s (%s)] ' % (str(cur_state), str(last_state)))
+
+                    for i, tape in enumerate(tapes):
+                        if tape not in forward_counts:
+                            forward_counts[tape] = 0
+                        if tape not in backward_counts:
+                            backward_counts[tape] = 0
+                        if tape not in old_curs:
+                            old_curs[tape] = 0
+
+                        cur = 0
+                        j = 0
+                        x = i*2 + 2
+                        y = 25
+                        screen.move(x, y)
+                        screen.clrtoeol()
+                        addstr(x, y,'[Tape %s] ' % i)
+
+                        for j, (pos, cur, char) in enumerate(tape.chars(loffset, roffset)):
+                            log.write('%s\n' % j)
+
+                            if pos == cur:
+                                addstr(x, y + 30 + j, char, curses.color_pair(1) | curses.A_BOLD)
+                            else:
+                                if j == 0:
+                                    addstr(x, y + 30 + j, char)
+                                else:
+                                    addstr(x, y + 30 + j, char, curses.A_BLINK)
+
+                            if callable(tape_eval):
+                                tape_eval(str(tape), functools.partial(addstr, x, y + 10))
+
+                        if tape.pos > last_pos.get(i,0):
+                            forward = '.'
+                            forward_count = forward_counts[tape]
+
+                            if forward_count == 2:
+                                forward = '..'
+                            if forward_count == 4:
+                                forward = '...'
+                            if forward_count == 6:
+                                forward = '....'
+                                forward_counts[tape] = 0
+
+                            addstr(x, y + 30 - len(forward), forward, curses.A_BOLD)
+
+                            if cur > old_curs[tape]:
+                                backward_counts[tape] = 0
+                                forward_counts[tape] += 1
                         else:
-                            addstr(x, y + 30 + j, char)
+                            backward = '.'
+                            backward_count = backward_counts[tape]
 
-                        if callable(tape_eval):
-                            tape_eval(str(tape), functools.partial(addstr, x, y + 100))
+                            if backward_count == 2:
+                                backward = '..'
+                            if backward_count == 4:
+                                backward = '...'
+                            if backward_count == 6:
+                                backward = '....'
+                                backward_counts[tape] = 0
 
-                    if tape.pos > last_pos.get(i,0):
-                        addstr(x, y + 80, '>>', curses.A_BOLD | curses.COLOR_GREEN)
-                    else:
-                        addstr(x, y + 80, '<<', curses.A_BOLD | curses.COLOR_GREEN)
+                            addstr(x, y + j + 30, backward, curses.A_BOLD)
+                            if cur < old_curs[tape]:
+                                forward_counts[tape] = 0
+                                backward_counts[tape] += 1
 
-                    last_pos[i] = tape.pos
+                        last_pos[i] = tape.pos
+                        old_curs[tape] = cur
 
-                if local_step_by_step:
-                    screen.getch()
+                    if local_step_by_step:
+                        screen.getch()
 
-                if lag:
-                    time.sleep(lag)
-                last_state = cur_state
-                screen.refresh()
-            screen.getch()
-        finally:
-            curses.endwin()
+                    if lag:
+                        time.sleep(lag)
+
+                    last_state = cur_state
+
+                    screen.refresh()
+
+                screen.getch()
+            finally:
+                curses.endwin()
 
     return run
 

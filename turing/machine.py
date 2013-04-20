@@ -30,11 +30,35 @@ class Tape(object):
         return ''.join([x for x in self.format(lambda _,_1,c: c)
                         if x != self._blank])
 
-    def chars(self, l=None, r=None):
-        f = l and self._pos - l or min(self._tape.keys() or [0])
-        t = r and self._pos + r or max(self._tape.keys() or [0])
-        for i in range(f, t + 1):
-            yield self._pos, i, self._tape.get(i, self._blank)
+    def chars(self, left_offset=None, right_offset=None):
+        from_pos = 0
+        to_pos = 0
+
+        if left_offset is not None:
+            from_pos = self._pos - left_offset
+        else:
+            from_pos = min(self._tape.keys() or [0])
+
+        if right_offset is not None:
+            to_pos = self._pos + right_offset + 1
+        else:
+            to_pos = min(self._tape.keys() or [0])
+
+        result = []
+
+        for i in range(from_pos, to_pos):
+            result.append((self._pos, i, self._tape.get(i, self._blank)))
+
+        assert len(result) == left_offset + right_offset + 1, "len(result) = %d. %d > %d. f: %d, t: %d. Pos: %d. Off: %d, %d" \
+                                                                % (len(result),
+                                                                   to_pos - from_pos,
+                                                                   left_offset + right_offset,
+                                                                   from_pos,
+                                                                   to_pos,
+                                                                   self._pos,
+                                                                   left_offset, right_offset)
+
+        return result
 
     def format(self, formatter, l=None, r=None):
         f = l and self._pos - l or min(self._tape.keys() or [0])
