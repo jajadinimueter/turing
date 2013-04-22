@@ -109,7 +109,7 @@ def create_terminal_runner(machine,
                             if cur > old_curs[tape]:
                                 backward_counts[tape] = 0
                                 forward_counts[tape] += 1
-                        else:
+                        elif tape.pos < last_pos.get(i,0):
                             backward = '.'
                             backward_count = backward_counts[tape]
 
@@ -125,6 +125,9 @@ def create_terminal_runner(machine,
                             if cur < old_curs[tape]:
                                 forward_counts[tape] = 0
                                 backward_counts[tape] += 1
+                        else:
+                            forward_counts[tape] = 0
+                            backward_counts[tape] = 0
 
                         last_pos[i] = tape.pos
                         old_curs[tape] = cur
