@@ -72,7 +72,7 @@ def create_terminal_runner(machine,
 
                         cur = 0
                         j = 0
-                        x = i*2 + 2
+                        x = i*2 + 10
                         y = 25
                         screen.move(x, y)
                         screen.clrtoeol()
